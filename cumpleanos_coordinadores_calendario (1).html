@@ -1,0 +1,174 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); }
+  .header { padding: 1.5rem 1rem 0.5rem; }
+  .header h2 { font-size: 18px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+  .header p { font-size: 13px; color: var(--color-text-secondary); }
+  .controls { display: flex; gap: 8px; padding: 0.75rem 1rem; flex-wrap: wrap; }
+  .filter-btn { font-size: 12px; padding: 4px 12px; border-radius: 20px; border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-secondary); cursor: pointer; transition: all 0.15s; }
+  .filter-btn.active { background: var(--color-background-secondary); color: var(--color-text-primary); border-color: var(--color-border-primary); font-weight: 500; }
+  .months-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; padding: 0.5rem 1rem 1.5rem; }
+  .month-card { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; background: var(--color-background-primary); }
+  .month-header { padding: 10px 14px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .month-name { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .month-count { font-size: 11px; color: var(--color-text-tertiary); margin-top: 1px; }
+  .person-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 14px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .person-row:last-child { border-bottom: none; }
+  .day-badge { min-width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; flex-shrink: 0; }
+  .person-info { flex: 1; }
+  .person-name { font-size: 13px; color: var(--color-text-primary); font-weight: 500; line-height: 1.3; }
+  .person-role { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; line-height: 1.3; }
+  .empty-month { padding: 14px; text-align: center; color: var(--color-text-tertiary); font-size: 12px; }
+  .list-view { display: none; padding: 0.5rem 1rem 1.5rem; }
+  .list-view.active { display: block; }
+  .months-grid.hidden { display: none; }
+  .list-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .list-table th { text-align: left; padding: 8px 12px; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); border-bottom: 0.5px solid var(--color-border-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .list-table td { padding: 9px 12px; border-bottom: 0.5px solid var(--color-border-tertiary); color: var(--color-text-primary); vertical-align: top; }
+  .list-table tr:last-child td { border-bottom: none; }
+  .date-col { color: var(--color-text-secondary); white-space: nowrap; }
+  .view-toggle { display: flex; gap: 4px; padding: 0 1rem 0 auto; }
+  .top-bar { display: flex; align-items: center; padding: 0 1rem; gap: 8px; flex-wrap: wrap; }
+  .spacer { flex: 1; }
+</style>
+
+<div class="header">
+  <h2>Cumpleaños de coordinadores</h2>
+  <p>Pastoral juvenil parroquial</p>
+</div>
+
+<div class="top-bar" style="margin-bottom: 4px;">
+  <div class="controls" style="padding: 0.5rem 0; flex: 1;">
+    <button class="filter-btn active" onclick="setFilter('todos')">Todos</button>
+    <button class="filter-btn" onclick="setFilter('ene-mar')">Ene–Mar</button>
+    <button class="filter-btn" onclick="setFilter('abr-jun')">Abr–Jun</button>
+    <button class="filter-btn" onclick="setFilter('jul-sep')">Jul–Sep</button>
+    <button class="filter-btn" onclick="setFilter('oct-dic')">Oct–Dic</button>
+  </div>
+  <div style="display: flex; gap: 6px; align-self: center;">
+    <button class="filter-btn active" id="btn-cal" onclick="setView('cal')">Calendario</button>
+    <button class="filter-btn" id="btn-list" onclick="setView('list')">Lista</button>
+  </div>
+</div>
+
+<div class="months-grid" id="months-grid"></div>
+<div class="list-view" id="list-view">
+  <table class="list-table">
+    <thead><tr><th>Fecha</th><th>Nombre</th><th>Grupo / Cargo</th></tr></thead>
+    <tbody id="list-body"></tbody>
+  </table>
+</div>
+
+<script>
+const raw = [
+  { name: "Frida Juliza García Castro", dob: "8/4/2005", role: "Coord. Multimedia" },
+  { name: "Diana Carolina Wong Soto", dob: "19/6/2005", role: "Cristo Rey (coordinadora)" },
+  { name: "Carolina Montoya Grajeda", dob: "24/5/1990", role: "Gpo. San Juan Pablo II (SCJ) · Decanato 4" },
+  { name: "Regina Guadalupe Chaparro Gastelum", dob: "12/12/2008", role: "Grupo Juvenil San José (coordinadora)" },
+  { name: "Fátima Saoly Valdez Norzagaray", dob: "13/5/2009", role: "Grupo Juvenil Santa Cecilia (coordinadora)" },
+  { name: "Paulet Vargas Perez", dob: "11/8/2006", role: "San Juan Pablo II – Sagrado Corazón (coordinadora)" },
+  { name: "Rubí Sofía González Bernal", dob: "19/10/2005", role: "Divina Providencia (coordinadora)" },
+  { name: "Paola Belén Castro Galván", dob: "21/6/2004", role: "Kairós (coordinadora)" },
+  { name: "Danna Yoseline Urias Castro", dob: "4/10/2007", role: "San José (coordinadora)" },
+  { name: "Ángel Enrique Orduño Gallardo", dob: "23/8/2006", role: "Movimiento de Arcoíris" },
+  { name: "Joel de Jesús Lugo López", dob: "15/10/2003", role: "Kairós (coordinador)" },
+  { name: "Jose Alberto Robles Nolasco", dob: "7/4/2002", role: "San Judas Tadeo – Pastoral Juvenil Parroquial (coordinador)" },
+  { name: "Iván Alejandro Gil Mendoza", dob: "2/8/1993", role: "Jornadas de Vida Cristiana (coordinador)" },
+  { name: "María Ximena López Bojórquez", dob: "17/6/2008", role: "Grupo Juvenil San Judas Tadeo (coordinadora)" },
+  { name: "Litay Azucena Torres Román", dob: "28/12/2003", role: "MFCJ Sector San Lucas (coordinadora)" },
+  { name: "Fernanda Ibarra Mercado", dob: "20/8/2009", role: "San Juan de los Lagos (coordinadora)" },
+  { name: "Jazmin Dolores Beltrán Hernández", dob: "9/9/2002", role: "Pastoral Juvenil Parroquial (coordinadora)" },
+  { name: "Eduardo Valenzuela Felix", dob: "24/9/2002", role: "Ministerio Pastoral" },
+  { name: "Said Alejandro Ensinas Rodriguez", dob: "15/9/2001", role: "Santuario de Guadalupe (coordinador)" },
+  { name: "Karla Angélica Cerón Castro", dob: "4/11/2026", role: "Santo Niño de la Salud" },
+  { name: "María Cristina Quiñonez Cota", dob: "28/1/2006", role: "Preparatoria (coordinadora)" },
+  { name: "Luis Gerardo Castro Yucipicio", dob: "12/12/2007", role: "MFC San Mateo" },
+  { name: "Giovanny Barajas", dob: "7/11/2007", role: "Santa Cecilia (subcoordinador)" },
+];
+
+const months = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const colors = ["#7F77DD","#1D9E75","#D85A30","#378ADD","#BA7517","#993556","#639922","#E24B4A","#0F6E56","#533AB7","#3B6D11","#185FA5"];
+const lightBgs = ["#EEEDFE","#E1F5EE","#FAECE7","#E6F1FB","#FAEEDA","#FBEAF0","#EAF3DE","#FCEBEB","#E1F5EE","#EEEDFE","#EAF3DE","#E6F1FB"];
+
+function parseDate(str) {
+  const [d, m, y] = str.split('/').map(Number);
+  return { day: d, month: m, year: y };
+}
+
+const people = raw.map(p => ({ ...p, ...parseDate(p.dob) }));
+people.sort((a, b) => a.month !== b.month ? a.month - b.month : a.day - b.day);
+
+const filterRanges = {
+  'todos': [1,12], 'ene-mar': [1,3], 'abr-jun': [4,6], 'jul-sep': [7,9], 'oct-dic': [10,12]
+};
+let currentFilter = 'todos';
+let currentView = 'cal';
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    if (['todos','ene-mar','abr-jun','jul-sep','oct-dic'].includes(b.getAttribute('onclick')?.match(/'([^']+)'/)?.[1])) {
+      b.classList.remove('active');
+    }
+  });
+  event.target.classList.add('active');
+  render();
+}
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('btn-cal').classList.toggle('active', v === 'cal');
+  document.getElementById('btn-list').classList.toggle('active', v === 'list');
+  document.getElementById('months-grid').classList.toggle('hidden', v !== 'cal');
+  document.getElementById('list-view').classList.toggle('active', v === 'list');
+  render();
+}
+
+function render() {
+  const [mMin, mMax] = filterRanges[currentFilter];
+  const filtered = people.filter(p => p.month >= mMin && p.month <= mMax);
+
+  if (currentView === 'cal') {
+    const grid = document.getElementById('months-grid');
+    grid.innerHTML = '';
+    for (let m = mMin; m <= mMax; m++) {
+      const inMonth = filtered.filter(p => p.month === m);
+      const card = document.createElement('div');
+      card.className = 'month-card';
+      const plural = inMonth.length !== 1 ? 'coordinadores' : 'coordinador';
+      card.innerHTML = `<div class="month-header"><div class="month-name">${months[m-1]}</div><div class="month-count">${inMonth.length} ${plural}</div></div>`;
+      if (inMonth.length === 0) {
+        card.innerHTML += `<div class="empty-month">Sin cumpleaños</div>`;
+      } else {
+        inMonth.forEach(p => {
+          const row = document.createElement('div');
+          row.className = 'person-row';
+          const ci = (m - 1) % colors.length;
+          row.innerHTML = `
+            <div class="day-badge" style="background:${lightBgs[ci]};color:${colors[ci]}">${p.day}</div>
+            <div class="person-info">
+              <div class="person-name">${p.name}</div>
+              <div class="person-role">${p.role}</div>
+            </div>`;
+          card.appendChild(row);
+        });
+      }
+      grid.appendChild(card);
+    }
+  } else {
+    const tbody = document.getElementById('list-body');
+    tbody.innerHTML = '';
+    filtered.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="date-col">${p.day} ${months[p.month-1].slice(0,3)}</td>
+        <td>${p.name}</td>
+        <td style="color:var(--color-text-secondary)">${p.role}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+}
+
+render();
+</script>
